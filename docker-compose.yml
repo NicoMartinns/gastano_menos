@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  postgres:
+    container_name: gastano_postgres
+    image: postgres:17.5
+    environment:
+      POSTGRES_USER: gastano_admin
+      POSTGRES_PASSWORD: gastano_senha123
+      POSTGRES_DB: gastano_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  
+volumes:
+  postgres_data:
+    
