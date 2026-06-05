@@ -3,9 +3,13 @@ package main
 import (
     "fmt"
     "log"
-    "os"
+    "net/http"
 
-    "github.com/nicolasmartins/gastano-menos/config"
+    "github.com/NicoMartinns/gastano-menos/config"
+    "github.com/NicoMartinns/gastano-menos/internal/handler"
+    "github.com/NicoMartinns/gastano-menos/internal/repository"
+    "github.com/NicoMartinns/gastano-menos/internal/service"
+    "github.com/go-chi/chi/v5"
     "github.com/joho/godotenv"
 )
 
@@ -20,6 +24,27 @@ func main() {
     }
     defer db.Close()
 
-    fmt.Println("Banco conectado com sucesso!")
-    _ = os.Getenv("DB_HOST")
+    // repositories
+    transactionRepo := repository.NewTransactionRepository(db)
+    userRepo := repository.NewUserRepository(db)
+
+    // services
+    transactionService := service.NewTransactionService(transactionRepo)
+    authService := service.NewAuthService(userRepo)
+
+    // handlers
+    transactionHandler := handler.NewTransactionHandler(transactionService)
+    authHandler := handler.NewAuthHandler(authService)
+
+    // rotas
+    r := chi.NewRouter()
+	r.Post("/auth/login", authHandler.Login)
+
+	r.Group(func(r chi.Router) {
+		r.Use(handler.AuthMiddleware)
+		r.Post("/transactions", transactionHandler.Create)
+	})
+
+    fmt.Println("Servidor rodando na porta 8080")
+    log.Fatal(http.ListenAndServe(":8080", r))
 }
