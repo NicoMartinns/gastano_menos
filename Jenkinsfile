@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKERHUB_USER = 'nicolasmartinss'
-        IMAGE_NAME     = 'gastando-menos'
+        IMAGE_NAME     = 'gastano-menos'
         IMAGE_TAG      = "${BUILD_NUMBER}"
         APP_VM_IP      = '201.23.83.151'
     }
@@ -42,13 +42,13 @@ pipeline {
                     sh """
                         ssh -o StrictHostKeyChecking=no ubuntu@${APP_VM_IP} '
                             docker pull ${DOCKERHUB_USER}/${IMAGE_NAME}:latest &&
-                            docker stop gastando-menos || true &&
-                            docker rm gastando-menos || true &&
+                            docker stop gastano-menos || true &&
+                            docker rm gastano-menos || true &&
                             docker run -d \
-                                --name gastando-menos \
+                                --name gastano-menos \
                                 --restart always \
                                 -p 8080:8080 \
-                                --env-file /home/ubuntu/gastando-menos.env \
+                                --env-file /home/ubuntu/gastano-menos.env \
                                 ${DOCKERHUB_USER}/${IMAGE_NAME}:latest
                         '
                     """
