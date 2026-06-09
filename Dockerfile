@@ -5,12 +5,12 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -o gastando-menos ./cmd/api
+RUN go build -o gastano-menos ./cmd/api
 
 FROM alpine:3.19
 
 WORKDIR /app
-COPY --from=builder /app/gastando-menos .
+COPY --from=builder /app/gastano-menos .
 
 EXPOSE 8080
-CMD ["./gastando-menos"]
+CMD ["./gastano-menos"]
