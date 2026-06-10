@@ -24,6 +24,12 @@ func main() {
     }
     defer db.Close()
 
+    if err := config.RunMigrations(db); err != nil {
+        log.Fatalf("Erro ao rodar migrations: %v", err)
+    }
+
+    fmt.Println("Migrations aplicadas com sucesso!")
+
     // repositories
     transactionRepo := repository.NewTransactionRepository(db)
     userRepo := repository.NewUserRepository(db)

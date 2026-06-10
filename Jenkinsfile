@@ -48,7 +48,7 @@ pipeline {
                                 --name gastano-menos \
                                 --restart always \
                                 -p 8080:8080 \
-                                --env-file /home/ubuntu/gastano-menos.env \
+                                --env-file /app/gastano-menos.env \
                                 ${DOCKERHUB_USER}/${IMAGE_NAME}:latest
                         '
                     """

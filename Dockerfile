@@ -11,6 +11,7 @@ FROM alpine:3.19
 
 WORKDIR /app
 COPY --from=builder /app/gastano-menos .
+COPY --from=builder /app/migrations ./migrations
 
 EXPOSE 8080
 CMD ["./gastano-menos"]
