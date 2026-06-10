@@ -49,6 +49,7 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(handler.AuthMiddleware)
 		r.Post("/transactions", transactionHandler.Create)
+        r.Get("/transactions", transactionHandler.GetByMonth)
 	})
 
     fmt.Println("Servidor rodando na porta 8080")

@@ -52,3 +52,7 @@ func (s *TransactionService) generateRecurring(origin *domain.Transaction) error
 
     return nil
 }
+
+func (s *TransactionService) GetByMonth(userID string, year int, month int) ([]domain.Transaction, error) {
+	return s.repo.FindByMonth(userID, year, month)
+}
