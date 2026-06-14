@@ -9,6 +9,16 @@ const (
     Expense TransactionType = "EXPENSE"
 )
 
+type PaymentMethod string
+
+const (
+    PaymentCredit PaymentMethod = "credit"
+    PaymentDebit  PaymentMethod = "debit"
+    PaymentPix    PaymentMethod = "pix"
+    PaymentBoleto PaymentMethod = "boleto"
+    PaymentCash   PaymentMethod = "cash"
+)
+
 type Transaction struct {
     ID                string
     UserID            string
@@ -17,10 +27,12 @@ type Transaction struct {
     Description       string
     Amount            float64
     Type              TransactionType
+    PaymentMethod     *PaymentMethod
     Date              time.Time
     IsRecurring       bool
-    RecurringMonths   *int       // ponteiro porque pode ser NULL
-    RecurrenceDay     *int       // ponteiro porque pode ser NULL
-    RecurringOriginID *string    // ponteiro porque pode ser NULL
+    RecurringMonths   *int
+    RecurrenceDay     *int
+    RecurringOriginID *string
     CreatedAt         time.Time
 }
+

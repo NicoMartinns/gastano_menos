@@ -17,28 +17,29 @@ func NewTransactionRepository(db *sql.DB) *TransactionRepository {
 }
 
 func (r *TransactionRepository) Create(t *domain.Transaction) error {
-    query := `
-        INSERT INTO transactions 
-            (id, user_id, category_id, description, amount, type, date, 
-             is_recurring, recurring_months, recurrence_day, recurring_origin_id, created_at)
-        VALUES 
-            (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        RETURNING id, created_at
-    `
+	query := `
+		INSERT INTO transactions 
+			(id, user_id, category_id, description, amount, type, date, 
+			 is_recurring, recurring_months, recurrence_day, recurring_origin_id,
+			 payment_method, created_at)
+		VALUES 
+			(gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		RETURNING id, created_at
+	`
 
-    return r.db.QueryRow(
-        query,
-        t.UserID, t.CategoryID, t.Description, t.Amount, t.Type,
-        t.Date, t.IsRecurring, t.RecurringMonths, t.RecurrenceDay,
-        t.RecurringOriginID, time.Now(),
-    ).Scan(&t.ID, &t.CreatedAt)
+	return r.db.QueryRow(
+		query,
+		t.UserID, t.CategoryID, t.Description, t.Amount, t.Type,
+		t.Date, t.IsRecurring, t.RecurringMonths, t.RecurrenceDay,
+		t.RecurringOriginID, t.PaymentMethod, time.Now(),
+	).Scan(&t.ID, &t.CreatedAt)
 }
 
 func (r *TransactionRepository) FindByMonth(userID string, year int, month int) ([]domain.Transaction, error) {
 	query := `
 		SELECT t.id, t.user_id, t.category_id, t.description, t.amount, t.type, t.date,
-		       t.is_recurring, t.recurring_months, t.recurrence_day, t.recurring_origin_id, t.created_at,
-		       c.name as category_name
+			t.is_recurring, t.recurring_months, t.recurrence_day, t.recurring_origin_id,
+			t.created_at, t.payment_method, c.name as category_name
 		FROM transactions t
 		LEFT JOIN categories c ON c.id = t.category_id
 		WHERE t.user_id = $1
@@ -60,7 +61,7 @@ func (r *TransactionRepository) FindByMonth(userID string, year int, month int) 
 			&t.ID, &t.UserID, &t.CategoryID, &t.Description,
 			&t.Amount, &t.Type, &t.Date, &t.IsRecurring,
 			&t.RecurringMonths, &t.RecurrenceDay, &t.RecurringOriginID,
-			&t.CreatedAt, &t.CategoryName,
+			&t.CreatedAt, &t.PaymentMethod, &t.CategoryName,
 		)
 		if err != nil {
 			return nil, err
@@ -92,16 +93,17 @@ func (r *TransactionRepository) Delete(id string, userID string) error {
 func (r *TransactionRepository) Update(t *domain.Transaction) error {
 	query := `
 		UPDATE transactions
-		SET category_id = $1,
-		    description = $2,
-		    amount      = $3,
-		    type        = $4,
-		    date        = $5
-		WHERE id = $6 AND user_id = $7
+		SET category_id     = $1,
+		    description     = $2,
+		    amount          = $3,
+		    type            = $4,
+		    date            = $5,
+		    payment_method  = $6
+		WHERE id = $7 AND user_id = $8
 	`
 	result, err := r.db.Exec(query,
 		t.CategoryID, t.Description, t.Amount,
-		t.Type, t.Date, t.ID, t.UserID,
+		t.Type, t.Date, t.PaymentMethod, t.ID, t.UserID,
 	)
 	if err != nil {
 		return err
