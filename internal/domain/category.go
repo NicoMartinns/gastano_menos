@@ -14,5 +14,6 @@ type Category struct {
     UserID    string
     Name      string
     Type      CategoryType
+    ParentID  *string
     CreatedAt time.Time
 }

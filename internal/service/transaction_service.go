@@ -56,3 +56,49 @@ func (s *TransactionService) generateRecurring(origin *domain.Transaction) error
 func (s *TransactionService) GetByMonth(userID string, year int, month int) ([]domain.Transaction, error) {
 	return s.repo.FindByMonth(userID, year, month)
 }
+
+func (s *TransactionService) Delete(id string, userID string) error {
+	return s.repo.Delete(id, userID)
+}
+
+func (s *TransactionService) Update(t *domain.Transaction) error {
+	return s.repo.Update(t)
+}
+
+func (s *TransactionService) GetMonthlySummary(userID string, year int) ([]domain.MonthlySummary, error) {
+	return s.repo.GetMonthlySummary(userID, year)
+}
+
+func (s *TransactionService) DeleteWithScope(id string, userID string, scope string) error {
+	t, err := s.repo.FindByID(id, userID)
+	if err != nil {
+		return err
+	}
+
+	if scope == "future" {
+		originID := id
+		if t.RecurringOriginID != nil {
+			originID = *t.RecurringOriginID
+		}
+		return s.repo.DeleteFuture(id, userID, t.Date, originID)
+	}
+
+	return s.repo.Delete(id, userID)
+}
+
+func (s *TransactionService) UpdateWithScope(id string, userID string, scope string, t *domain.Transaction) error {
+	existing, err := s.repo.FindByID(id, userID)
+	if err != nil {
+		return err
+	}
+
+	if scope == "future" {
+		originID := id
+		if existing.RecurringOriginID != nil {
+			originID = *existing.RecurringOriginID
+		}
+		return s.repo.UpdateFuture(originID, userID, existing.Date, t)
+	}
+
+	return s.repo.Update(t)
+}

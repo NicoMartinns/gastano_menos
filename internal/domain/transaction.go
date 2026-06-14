@@ -13,6 +13,7 @@ type Transaction struct {
     ID                string
     UserID            string
     CategoryID        string
+    CategoryName      string
     Description       string
     Amount            float64
     Type              TransactionType
