@@ -21,14 +21,15 @@ func NewTransactionHandler(service *service.TransactionService) *TransactionHand
 }
 
 type CreateTransactionRequest struct {
-	CategoryID      string  `json:"category_id"`
-	Description     string  `json:"description"`
-	Amount          float64 `json:"amount"`
-	Type            string  `json:"type"`
-	Date            string  `json:"date"`
-	IsRecurring     bool    `json:"is_recurring"`
-	RecurringMonths *int    `json:"recurring_months"`
-	RecurrenceDay   *int    `json:"recurrence_day"`
+    CategoryID      string  `json:"category_id"`
+    Description     string  `json:"description"`
+    Amount          float64 `json:"amount"`
+    Type            string  `json:"type"`
+    Date            string  `json:"date"`
+    IsRecurring     bool    `json:"is_recurring"`
+    RecurringMonths *int    `json:"recurring_months"`
+    RecurrenceDay   *int    `json:"recurrence_day"`
+    PaymentMethod   *string `json:"payment_method"`
 }
 
 func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -50,6 +51,8 @@ func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	pm := (*domain.PaymentMethod)(req.PaymentMethod)
+
 	transaction := &domain.Transaction{
 		UserID:          userID,
 		CategoryID:      req.CategoryID,
@@ -60,6 +63,7 @@ func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		IsRecurring:     req.IsRecurring,
 		RecurringMonths: req.RecurringMonths,
 		RecurrenceDay:   req.RecurrenceDay,
+		PaymentMethod:   pm,
 	}
 
 	if err := h.service.Create(transaction); err != nil {
@@ -153,14 +157,17 @@ func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	pm := (*domain.PaymentMethod)(req.PaymentMethod)
+
 	transaction := &domain.Transaction{
-		ID:          id,
-		UserID:      userID,
-		CategoryID:  req.CategoryID,
-		Description: req.Description,
-		Amount:      req.Amount,
-		Type:        domain.TransactionType(req.Type),
-		Date:        date,
+		ID:            id,
+		UserID:        userID,
+		CategoryID:    req.CategoryID,
+		Description:   req.Description,
+		Amount:        req.Amount,
+		Type:          domain.TransactionType(req.Type),
+		Date:          date,
+		PaymentMethod: pm,
 	}
 
 	if err := h.service.UpdateWithScope(id, userID, scope, transaction); err != nil {
