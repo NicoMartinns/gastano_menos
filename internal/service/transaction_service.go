@@ -43,6 +43,7 @@ func (s *TransactionService) generateRecurring(origin *domain.Transaction) error
             Date:              origin.Date.AddDate(0, i, 0),
             IsRecurring:       false,
             RecurringOriginID: &origin.ID,
+			PaymentMethod: origin.PaymentMethod,
         }
 
         if err := s.repo.Create(child); err != nil {
