@@ -171,16 +171,17 @@ func (r *TransactionRepository) DeleteFuture(id string, userID string, date time
 func (r *TransactionRepository) UpdateFuture(originID string, userID string, date time.Time, t *domain.Transaction) error {
 	query := `
 		UPDATE transactions
-		SET category_id  = $1,
-		    description  = $2,
-		    amount       = $3,
-		    type         = $4
-		WHERE user_id = $5
-		  AND date >= $6
-		  AND (id = $7 OR recurring_origin_id = $8)
+		SET category_id    = $1,
+		    description    = $2,
+		    amount         = $3,
+		    type           = $4,
+		    payment_method = $5
+		WHERE user_id = $6
+		  AND date >= $7
+		  AND (id = $8 OR recurring_origin_id = $9)
 	`
 	_, err := r.db.Exec(query,
-		t.CategoryID, t.Description, t.Amount, t.Type,
+		t.CategoryID, t.Description, t.Amount, t.Type, t.PaymentMethod,
 		userID, date, t.ID, originID,
 	)
 	return err
