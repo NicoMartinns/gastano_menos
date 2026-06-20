@@ -11,7 +11,28 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-  
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gastano_admin -d gastano_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    container_name: gastano_app
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: gastano_admin
+      DB_PASSWORD: gastano_senha123
+      DB_NAME: gastano_db
+      JWT_SECRET: MaxVerstappenFoiCampeaoEm2021PelaRedBull
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
     
