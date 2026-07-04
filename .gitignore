@@ -26,6 +26,7 @@ go.work.sum
 
 # env file
 .env
+gastano-menos.env
 
 # Editor/IDE
 # .idea/

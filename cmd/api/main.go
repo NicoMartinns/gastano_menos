@@ -50,7 +50,7 @@ func main() {
     r := chi.NewRouter()
 
     r.Use(cors.Handler(cors.Options{
-        AllowedOrigins:   []string{"http://localhost:3000", "http://127.0.0.1:3000"},
+	AllowedOrigins:   []string{"http://localhost:3000", "http://127.0.0.1:3000","http://201.23.83.151"},
         AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
         AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
         AllowCredentials: true,
