@@ -45,7 +45,7 @@ func (r *TransactionRepository) FindByMonth(userID string, year int, month int) 
 		WHERE t.user_id = $1
 		  AND EXTRACT(YEAR FROM t.date) = $2
 		  AND EXTRACT(MONTH FROM t.date) = $3
-		ORDER BY t.date ASC
+		ORDER BY t.date DESC
 	`
 
 	rows, err := r.db.Query(query, userID, year, month)
