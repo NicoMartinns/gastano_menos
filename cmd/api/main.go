@@ -1,75 +1,83 @@
 package main
 
 import (
-    "fmt"
-    "log"
-    "net/http"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strings"
 
-    "github.com/NicoMartinns/gastano-menos/config"
-    "github.com/NicoMartinns/gastano-menos/internal/handler"
-    "github.com/NicoMartinns/gastano-menos/internal/repository"
-    "github.com/NicoMartinns/gastano-menos/internal/service"
-    "github.com/go-chi/chi/v5"
-    "github.com/joho/godotenv"
-    "github.com/go-chi/cors"
+	"github.com/NicoMartinns/gastano-menos/config"
+	"github.com/NicoMartinns/gastano-menos/internal/handler"
+	"github.com/NicoMartinns/gastano-menos/internal/repository"
+	"github.com/NicoMartinns/gastano-menos/internal/service"
+	"github.com/go-chi/chi/v5"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-    if err := godotenv.Load(); err != nil {
-        log.Println("Aviso: arquivo .env não encontrado, usando variáveis de ambiente do sistema")
-    }
+	if err := godotenv.Load(); err != nil {
+		log.Println("Aviso: arquivo .env não encontrado, usando variáveis de ambiente do sistema")
+	}
 
-    db, err := config.NewDB()
-    if err != nil {
-        log.Fatalf("Erro ao conectar no banco: %v", err)
-    }
-    defer db.Close()
+	if strings.TrimSpace(os.Getenv("JWT_SECRET")) == "" {
+		log.Fatal("JWT_SECRET deve ser configurado")
+	}
 
-    if err := config.RunMigrations(db); err != nil {
-        log.Fatalf("Erro ao rodar migrations: %v", err)
-    }
+	db, err := config.NewDB()
+	if err != nil {
+		log.Fatalf("Erro ao conectar no banco: %v", err)
+	}
+	defer db.Close()
 
-    fmt.Println("Migrations aplicadas com sucesso!")
+	if err := config.RunMigrations(db); err != nil {
+		log.Fatalf("Erro ao rodar migrations: %v", err)
+	}
 
-    // repositories
-    transactionRepo := repository.NewTransactionRepository(db)
-    userRepo := repository.NewUserRepository(db)
-    categoryRepo := repository.NewCategoryRepository(db)
+	fmt.Println("Migrations aplicadas com sucesso!")
 
-    // services
-    transactionService := service.NewTransactionService(transactionRepo)
-    authService := service.NewAuthService(userRepo)
-    categoryService := service.NewCategoryService(categoryRepo)
+	// repositories
+	transactionRepo := repository.NewTransactionRepository(db)
+	userRepo := repository.NewUserRepository(db)
+	categoryRepo := repository.NewCategoryRepository(db)
 
-    // handlers
-    transactionHandler := handler.NewTransactionHandler(transactionService)
-    authHandler := handler.NewAuthHandler(authService)
-    categoryHandler := handler.NewCategoryHandler(categoryService)
+	// services
+	transactionService := service.NewTransactionService(transactionRepo)
+	authService := service.NewAuthService(userRepo)
+	categoryService := service.NewCategoryService(categoryRepo)
 
-    // rotas
-    r := chi.NewRouter()
+	// handlers
+	transactionHandler := handler.NewTransactionHandler(transactionService)
+	authHandler := handler.NewAuthHandler(authService)
+	categoryHandler := handler.NewCategoryHandler(categoryService)
+	userHandler := handler.NewUserHandler(service.NewUserService(userRepo))
 
-    r.Use(cors.Handler(cors.Options{
-	AllowedOrigins:   []string{"http://localhost:3000", "http://127.0.0.1:3000","http://201.23.83.151"},
-        AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-        AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-        AllowCredentials: true,
-    }))
+	// rotas
+	r := chi.NewRouter()
+
+	r.Use(config.CORSHandler())
 
 	r.Post("/auth/login", authHandler.Login)
 
 	r.Group(func(r chi.Router) {
-		r.Use(handler.AuthMiddleware)
+		r.Use(handler.NewAuthMiddleware(userRepo))
+		r.Get("/auth/me", authHandler.Me)
+		r.Route("/admin/users", func(r chi.Router) {
+			r.Use(handler.AdminMiddleware)
+			r.Get("/", userHandler.List)
+			r.Post("/", userHandler.Create)
+			r.Put("/{id}", userHandler.Update)
+		})
 		r.Post("/transactions", transactionHandler.Create)
-        r.Get("/transactions", transactionHandler.GetByMonth)
-        r.Get("/transactions/summary", transactionHandler.GetMonthlySummary)
-        r.Delete("/transactions/{id}", transactionHandler.Delete)
-        r.Put("/transactions/{id}", transactionHandler.Update)
+		r.Get("/transactions", transactionHandler.GetByMonth)
+		r.Get("/transactions/summary", transactionHandler.GetMonthlySummary)
+		r.Delete("/transactions/{id}", transactionHandler.Delete)
+		r.Put("/transactions/{id}", transactionHandler.Update)
 		r.Get("/categories", categoryHandler.GetAll)
-        r.Post("/categories", categoryHandler.Create)
-        r.Delete("/categories/{id}", categoryHandler.Delete)
+		r.Post("/categories", categoryHandler.Create)
+		r.Delete("/categories/{id}", categoryHandler.Delete)
 	})
 
-    fmt.Println("Servidor rodando na porta 8080")
-    log.Fatal(http.ListenAndServe(":8080", r))
+	fmt.Println("Servidor rodando na porta 8080")
+	log.Fatal(http.ListenAndServe(":8080", r))
 }

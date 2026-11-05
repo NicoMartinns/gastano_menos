@@ -6,11 +6,13 @@ RUN go mod download
 
 COPY . .
 RUN go build -o gastano-menos ./cmd/api
+RUN go build -o create-admin ./cmd/create-admin
 
 FROM alpine:3.19
 
 WORKDIR /app
 COPY --from=builder /app/gastano-menos .
+COPY --from=builder /app/create-admin .
 COPY --from=builder /app/migrations ./migrations
 
 EXPOSE 8080

@@ -2,59 +2,72 @@ package handler
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
+	"github.com/NicoMartinns/gastano-menos/internal/domain"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type contextKey string
 
 const UserIDKey contextKey = "user_id"
+const UserKey contextKey = "user"
 
-func AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "token não informado", http.StatusUnauthorized)
-			return
-		}
+var uuidPattern = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			http.Error(w, "formato inválido, use: Bearer <token>", http.StatusUnauthorized)
-			return
-		}
+type AuthUserLookup interface {
+	FindByID(string) (*domain.User, error)
+}
 
-		tokenStr := parts[1]
-		secret := os.Getenv("JWT_SECRET")
-
-		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, jwt.ErrSignatureInvalid
+func NewAuthMiddleware(users AuthUserLookup) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			parts := strings.Fields(r.Header.Get("Authorization"))
+			if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+				http.Error(w, "token não informado ou inválido", http.StatusUnauthorized)
+				return
 			}
-			return []byte(secret), nil
+			secret := os.Getenv("JWT_SECRET")
+			if strings.TrimSpace(secret) == "" {
+				http.Error(w, "autenticação indisponível", http.StatusInternalServerError)
+				return
+			}
+			claims := &domain.AccessClaims{}
+			token, err := jwt.ParseWithClaims(parts[1], claims, func(t *jwt.Token) (interface{}, error) {
+				return []byte(secret), nil
+			}, jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired())
+			if err != nil || !token.Valid || !uuidPattern.MatchString(claims.Subject) {
+				http.Error(w, "token inválido ou expirado", http.StatusUnauthorized)
+				return
+			}
+			user, err := users.FindByID(claims.Subject)
+			if err != nil {
+				log.Printf("erro ao verificar acesso do usuário: %v", err)
+				http.Error(w, "erro ao verificar acesso", http.StatusInternalServerError)
+				return
+			}
+			if user == nil || !user.IsActive || user.SessionVersion != claims.SessionVersion {
+				http.Error(w, "sessão inválida ou acesso não liberado", http.StatusUnauthorized)
+				return
+			}
+			ctx := context.WithValue(r.Context(), UserIDKey, user.ID)
+			ctx = context.WithValue(ctx, UserKey, user)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
+	}
+}
 
-		if err != nil || !token.Valid {
-			http.Error(w, "token inválido ou expirado", http.StatusUnauthorized)
+func AdminMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := r.Context().Value(UserKey).(*domain.User)
+		if !ok || !user.IsActive || user.Role != domain.RoleAdmin {
+			http.Error(w, "acesso restrito ao administrador", http.StatusForbidden)
 			return
 		}
-
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			http.Error(w, "token inválido", http.StatusUnauthorized)
-			return
-		}
-
-		userID, ok := claims["sub"].(string)
-		if !ok {
-			http.Error(w, "token inválido", http.StatusUnauthorized)
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), UserIDKey, userID)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r)
 	})
 }

@@ -31,3 +31,7 @@ gastano-menos.env
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Cópias locais de bancos
+dump.sql
+backups/

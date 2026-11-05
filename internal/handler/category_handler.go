@@ -18,13 +18,13 @@ func NewCategoryHandler(service *service.CategoryService) *CategoryHandler {
 }
 
 func (h *CategoryHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(UserIDKey).(string)
+	_, ok := r.Context().Value(UserIDKey).(string)
 	if !ok {
 		http.Error(w, "usuário não autenticado", http.StatusUnauthorized)
 		return
 	}
 
-	categories, err := h.service.GetAll(userID)
+	categories, err := h.service.GetAll()
 	if err != nil {
 		log.Printf("erro ao buscar categorias: %v", err)
 		http.Error(w, "erro ao buscar categorias", http.StatusInternalServerError)
@@ -67,7 +67,7 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(UserIDKey).(string)
+	_, ok := r.Context().Value(UserIDKey).(string)
 	if !ok {
 		http.Error(w, "usuário não autenticado", http.StatusUnauthorized)
 		return
@@ -75,7 +75,7 @@ func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
 
-	if err := h.service.Delete(id, userID); err != nil {
+	if err := h.service.Delete(id); err != nil {
 		log.Printf("erro ao deletar categoria: %v", err)
 		http.Error(w, "erro ao deletar categoria", http.StatusInternalServerError)
 		return

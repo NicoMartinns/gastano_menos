@@ -1,19 +1,19 @@
 package repository
 
 import (
-    "database/sql"
-    "fmt"
-    "time"
+	"database/sql"
+	"fmt"
+	"time"
 
-    "github.com/NicoMartinns/gastano-menos/internal/domain"
+	"github.com/NicoMartinns/gastano-menos/internal/domain"
 )
 
 type TransactionRepository struct {
-    db *sql.DB
+	db *sql.DB
 }
 
 func NewTransactionRepository(db *sql.DB) *TransactionRepository {
-    return &TransactionRepository{db: db}
+	return &TransactionRepository{db: db}
 }
 
 func (r *TransactionRepository) Create(t *domain.Transaction) error {
@@ -35,20 +35,19 @@ func (r *TransactionRepository) Create(t *domain.Transaction) error {
 	).Scan(&t.ID, &t.CreatedAt)
 }
 
-func (r *TransactionRepository) FindByMonth(userID string, year int, month int) ([]domain.Transaction, error) {
+func (r *TransactionRepository) FindByMonth(year int, month int) ([]domain.Transaction, error) {
 	query := `
 		SELECT t.id, t.user_id, t.category_id, t.description, t.amount, t.type, t.date,
 			t.is_recurring, t.recurring_months, t.recurrence_day, t.recurring_origin_id,
 			t.created_at, t.payment_method, c.name as category_name
 		FROM transactions t
 		LEFT JOIN categories c ON c.id = t.category_id
-		WHERE t.user_id = $1
-		  AND EXTRACT(YEAR FROM t.date) = $2
-		  AND EXTRACT(MONTH FROM t.date) = $3
+		WHERE EXTRACT(YEAR FROM t.date) = $1
+		  AND EXTRACT(MONTH FROM t.date) = $2
 		ORDER BY t.date DESC
 	`
 
-	rows, err := r.db.Query(query, userID, year, month)
+	rows, err := r.db.Query(query, year, month)
 	if err != nil {
 		return nil, err
 	}
@@ -69,12 +68,12 @@ func (r *TransactionRepository) FindByMonth(userID string, year int, month int) 
 		transactions = append(transactions, t)
 	}
 
-	return transactions, nil
+	return transactions, rows.Err()
 }
 
-func (r *TransactionRepository) Delete(id string, userID string) error {
-	query := `DELETE FROM transactions WHERE id = $1 AND user_id = $2`
-	result, err := r.db.Exec(query, id, userID)
+func (r *TransactionRepository) Delete(id string) error {
+	query := `DELETE FROM transactions WHERE id = $1`
+	result, err := r.db.Exec(query, id)
 	if err != nil {
 		return err
 	}
@@ -99,11 +98,11 @@ func (r *TransactionRepository) Update(t *domain.Transaction) error {
 		    type            = $4,
 		    date            = $5,
 		    payment_method  = $6
-		WHERE id = $7 AND user_id = $8
+		WHERE id = $7
 	`
 	result, err := r.db.Exec(query,
 		t.CategoryID, t.Description, t.Amount,
-		t.Type, t.Date, t.PaymentMethod, t.ID, t.UserID,
+		t.Type, t.Date, t.PaymentMethod, t.ID,
 	)
 	if err != nil {
 		return err
@@ -120,7 +119,7 @@ func (r *TransactionRepository) Update(t *domain.Transaction) error {
 	return nil
 }
 
-func (r *TransactionRepository) GetMonthlySummary(userID string, year int) ([]domain.MonthlySummary, error) {
+func (r *TransactionRepository) GetMonthlySummary(year int) ([]domain.MonthlySummary, error) {
 	query := `
 		WITH months AS (
 			SELECT generate_series(1, 12) AS month
@@ -132,13 +131,12 @@ func (r *TransactionRepository) GetMonthlySummary(userID string, year int) ([]do
 		FROM months m
 		LEFT JOIN transactions t
 			ON EXTRACT(MONTH FROM t.date)::int = m.month
-			AND EXTRACT(YEAR FROM t.date)::int = $2
-			AND t.user_id = $1
+			AND EXTRACT(YEAR FROM t.date)::int = $1
 		GROUP BY m.month
 		ORDER BY m.month ASC
 	`
 
-	rows, err := r.db.Query(query, userID, year)
+	rows, err := r.db.Query(query, year)
 	if err != nil {
 		return nil, err
 	}
@@ -154,21 +152,20 @@ func (r *TransactionRepository) GetMonthlySummary(userID string, year int) ([]do
 		summary = append(summary, s)
 	}
 
-	return summary, nil
+	return summary, rows.Err()
 }
 
-func (r *TransactionRepository) DeleteFuture(id string, userID string, date time.Time, originID string) error {
+func (r *TransactionRepository) DeleteFuture(id string, date time.Time, originID string) error {
 	query := `
 		DELETE FROM transactions
-		WHERE user_id = $1
-		  AND date >= $2
-		  AND (id = $3 OR (recurring_origin_id = $4 AND date >= $2))
+		WHERE date >= $1
+		  AND (id = $2 OR recurring_origin_id = $3)
 	`
-	_, err := r.db.Exec(query, userID, date, id, originID)
+	_, err := r.db.Exec(query, date, id, originID)
 	return err
 }
 
-func (r *TransactionRepository) UpdateFuture(originID string, userID string, date time.Time, t *domain.Transaction) error {
+func (r *TransactionRepository) UpdateFuture(originID string, date time.Time, t *domain.Transaction) error {
 	query := `
 		UPDATE transactions
 		SET category_id    = $1,
@@ -176,26 +173,25 @@ func (r *TransactionRepository) UpdateFuture(originID string, userID string, dat
 		    amount         = $3,
 		    type           = $4,
 		    payment_method = $5
-		WHERE user_id = $6
-		  AND date >= $7
-		  AND (id = $8 OR recurring_origin_id = $9)
+		WHERE date >= $6
+		  AND (id = $7 OR recurring_origin_id = $8)
 	`
 	_, err := r.db.Exec(query,
 		t.CategoryID, t.Description, t.Amount, t.Type, t.PaymentMethod,
-		userID, date, t.ID, originID,
+		date, t.ID, originID,
 	)
 	return err
 }
 
-func (r *TransactionRepository) FindByID(id string, userID string) (*domain.Transaction, error) {
+func (r *TransactionRepository) FindByID(id string) (*domain.Transaction, error) {
 	query := `
 		SELECT id, user_id, category_id, description, amount, type, date,
 		       is_recurring, recurring_months, recurrence_day, recurring_origin_id, created_at
 		FROM transactions
-		WHERE id = $1 AND user_id = $2
+		WHERE id = $1
 	`
 	t := &domain.Transaction{}
-	err := r.db.QueryRow(query, id, userID).Scan(
+	err := r.db.QueryRow(query, id).Scan(
 		&t.ID, &t.UserID, &t.CategoryID, &t.Description,
 		&t.Amount, &t.Type, &t.Date, &t.IsRecurring,
 		&t.RecurringMonths, &t.RecurrenceDay, &t.RecurringOriginID,

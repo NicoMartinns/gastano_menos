@@ -21,15 +21,15 @@ func NewTransactionHandler(service *service.TransactionService) *TransactionHand
 }
 
 type CreateTransactionRequest struct {
-    CategoryID      string  `json:"category_id"`
-    Description     string  `json:"description"`
-    Amount          float64 `json:"amount"`
-    Type            string  `json:"type"`
-    Date            string  `json:"date"`
-    IsRecurring     bool    `json:"is_recurring"`
-    RecurringMonths *int    `json:"recurring_months"`
-    RecurrenceDay   *int    `json:"recurrence_day"`
-    PaymentMethod   *string `json:"payment_method"`
+	CategoryID      string  `json:"category_id"`
+	Description     string  `json:"description"`
+	Amount          float64 `json:"amount"`
+	Type            string  `json:"type"`
+	Date            string  `json:"date"`
+	IsRecurring     bool    `json:"is_recurring"`
+	RecurringMonths *int    `json:"recurring_months"`
+	RecurrenceDay   *int    `json:"recurrence_day"`
+	PaymentMethod   *string `json:"payment_method"`
 }
 
 func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +78,7 @@ func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TransactionHandler) GetByMonth(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(UserIDKey).(string)
+	_, ok := r.Context().Value(UserIDKey).(string)
 	if !ok {
 		http.Error(w, "usuário não autenticado", http.StatusUnauthorized)
 		return
@@ -99,7 +99,7 @@ func (h *TransactionHandler) GetByMonth(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	transactions, err := h.service.GetByMonth(userID, year, month)
+	transactions, err := h.service.GetByMonth(year, month)
 	if err != nil {
 		log.Printf("erro ao buscar transações: %v", err)
 		http.Error(w, "erro ao buscar transações", http.StatusInternalServerError)
@@ -111,7 +111,7 @@ func (h *TransactionHandler) GetByMonth(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *TransactionHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(UserIDKey).(string)
+	_, ok := r.Context().Value(UserIDKey).(string)
 	if !ok {
 		http.Error(w, "usuário não autenticado", http.StatusUnauthorized)
 		return
@@ -123,7 +123,7 @@ func (h *TransactionHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		scope = "single"
 	}
 
-	if err := h.service.DeleteWithScope(id, userID, scope); err != nil {
+	if err := h.service.DeleteWithScope(id, scope); err != nil {
 		log.Printf("erro ao deletar transação: %v", err)
 		http.Error(w, "erro ao deletar transação", http.StatusInternalServerError)
 		return
@@ -170,7 +170,7 @@ func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 		PaymentMethod: pm,
 	}
 
-	if err := h.service.UpdateWithScope(id, userID, scope, transaction); err != nil {
+	if err := h.service.UpdateWithScope(id, scope, transaction); err != nil {
 		log.Printf("erro ao atualizar transação: %v", err)
 		http.Error(w, "erro ao atualizar transação", http.StatusInternalServerError)
 		return
@@ -181,7 +181,7 @@ func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TransactionHandler) GetMonthlySummary(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(UserIDKey).(string)
+	_, ok := r.Context().Value(UserIDKey).(string)
 	if !ok {
 		http.Error(w, "usuário não autenticado", http.StatusUnauthorized)
 		return
@@ -194,7 +194,7 @@ func (h *TransactionHandler) GetMonthlySummary(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	summary, err := h.service.GetMonthlySummary(userID, year)
+	summary, err := h.service.GetMonthlySummary(year)
 	if err != nil {
 		log.Printf("erro ao buscar resumo mensal: %v", err)
 		http.Error(w, "erro ao buscar resumo mensal", http.StatusInternalServerError)
