@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: gastano_senha123
       POSTGRES_DB: gastano_db
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,8 +21,9 @@ services:
     container_name: gastano_app
     build: .
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:5580,http://201.23.83.151}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: gastano_admin
@@ -32,6 +33,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  web:
+    build:
+      context: ../gastano-menos-web
+      args:
+        VITE_API_URL: /api
+    ports:
+      - "80:80"
+    depends_on:
+      - app
 
 volumes:
   postgres_data:

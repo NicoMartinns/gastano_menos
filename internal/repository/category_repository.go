@@ -15,15 +15,14 @@ func NewCategoryRepository(db *sql.DB) *CategoryRepository {
 	return &CategoryRepository{db: db}
 }
 
-func (r *CategoryRepository) FindAll(userID string) ([]domain.Category, error) {
+func (r *CategoryRepository) FindAll() ([]domain.Category, error) {
 	query := `
 		SELECT id, user_id, name, type, parent_id, created_at
 		FROM categories
-		WHERE user_id = $1
 		ORDER BY parent_id NULLS FIRST, name ASC
 	`
 
-	rows, err := r.db.Query(query, userID)
+	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +38,7 @@ func (r *CategoryRepository) FindAll(userID string) ([]domain.Category, error) {
 		categories = append(categories, c)
 	}
 
-	return categories, nil
+	return categories, rows.Err()
 }
 
 func (r *CategoryRepository) Create(c *domain.Category) error {
@@ -51,9 +50,9 @@ func (r *CategoryRepository) Create(c *domain.Category) error {
 	return r.db.QueryRow(query, c.UserID, c.Name, c.Type, c.ParentID).Scan(&c.ID, &c.CreatedAt)
 }
 
-func (r *CategoryRepository) Delete(id string, userID string) error {
-	query := `DELETE FROM categories WHERE id = $1 AND user_id = $2`
-	result, err := r.db.Exec(query, id, userID)
+func (r *CategoryRepository) Delete(id string) error {
+	query := `DELETE FROM categories WHERE id = $1`
+	result, err := r.db.Exec(query, id)
 	if err != nil {
 		return err
 	}

@@ -13,8 +13,8 @@ func NewCategoryService(repo *repository.CategoryRepository) *CategoryService {
 	return &CategoryService{repo: repo}
 }
 
-func (s *CategoryService) GetAll(userID string) ([]domain.Category, error) {
-	return s.repo.FindAll(userID)
+func (s *CategoryService) GetAll() ([]domain.Category, error) {
+	return s.repo.FindAll()
 }
 
 func (s *CategoryService) Create(userID, name, categoryType string, parentID *string) (*domain.Category, error) {
@@ -30,6 +30,6 @@ func (s *CategoryService) Create(userID, name, categoryType string, parentID *st
 	return c, nil
 }
 
-func (s *CategoryService) Delete(id string, userID string) error {
-	return s.repo.Delete(id, userID)
+func (s *CategoryService) Delete(id string) error {
+	return s.repo.Delete(id)
 }
